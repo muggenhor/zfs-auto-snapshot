@@ -148,6 +148,8 @@ do_snapshots () # properties, flags, snapname, oldglob, [targets...]
 	local GLOB="$4"
 	local TARGETS="$5"
 	local KEEP=''
+	local SNAPSHOTS=''
+	local TARGET_COUNT='0'
 
 	# global DESTRUCTION_COUNT
 	# global SNAPSHOT_COUNT
@@ -156,14 +158,19 @@ do_snapshots () # properties, flags, snapname, oldglob, [targets...]
 
 	for ii in $TARGETS
 	do
-		if do_run "zfs snapshot $PROPS $FLAGS '$ii@$NAME'" 
-		then
-			SNAPSHOT_COUNT=$(( $SNAPSHOT_COUNT + 1 ))
-		else
-			WARNING_COUNT=$(( $WARNING_COUNT + 1 ))
-			continue
-		fi 
+		SNAPSHOTS="${SNAPSHOTS:+$SNAPSHOTS	}$ii@$NAME" # nb: \t
+		TARGET_COUNT=$(( $TARGET_COUNT + 1 ))
+	done
+	if do_run "zfs snapshot $PROPS $FLAGS $SNAPSHOTS"
+	then
+		SNAPSHOT_COUNT=$(( $SNAPSHOT_COUNT + $TARGET_COUNT ))
+	else
+		WARNING_COUNT=$(( $WARNING_COUNT + $TARGET_COUNT ))
+		return 0
+	fi
 
+	for ii in $TARGETS
+	do
 		# Retain at most $opt_keep number of old snapshots of this filesystem,
 		# including the one that was just recently created.
 		test -z "$opt_keep" && continue
@@ -195,11 +202,8 @@ do_snapshots () # properties, flags, snapname, oldglob, [targets...]
 # {
 
 GETOPT=$(getopt \
-  --longoptions=default-exclude,dry-run,fast,skip-scrub,recursive \
-  --longoptions=event:,keep:,label:,prefix:,sep: \
-  --longoptions=debug,help,quiet,syslog,verbose \
-  --options=dnshe:l:k:p:rs:qgv \
-  -- "$@" ) \
+  dnshe:l:k:p:rs:qgv \
+  "$@" ) \
   || exit 128
 
 eval set -- "$GETOPT"
@@ -504,7 +508,7 @@ SNAPPROP="-o com.sun:auto-snapshot-desc='$opt_event'"
 
 # ISO style date; fifteen characters: YYYY-MM-DD-HHMM
 # On Solaris %H%M expands to 12h34.
-DATE=$(date --utc +%F-%H%M)
+DATE=$(date -u +%F-%H%M)
 
 # The snapshot name after the @ symbol.
 SNAPNAME="$opt_prefix${opt_label:+$opt_sep$opt_label}-$DATE"

@@ -1,8 +1,9 @@
 # Created by: Giel van Schijndel <me@mortis.eu>
 # $FreeBSD$
 
-PORTNAME=       zfs-auto-snapshot
+PORTNAME=	zfs-auto-snapshot
 PORTVERSION=	1.1.0.1
+PORTREVISION=	1
 CATEGORIES=	sysutils
 
 MAINTAINER=	me@mortis.eu
@@ -41,6 +42,7 @@ do-install:
 .for _file in ${PERIODIC_FILES}
 	${SED} -e "s|/sbin/zfs-auto-snapshot|${PREFIX}/sbin/zfs-auto-snapshot|" \
 		${WRKSRC}/${_file} > ${STAGEDIR}${PREFIX}/${_file}
+	${CHMOD} ${BINMODE} ${STAGEDIR}${PREFIX}/${_file}
 .endfor
 
 .include <bsd.port.mk>
